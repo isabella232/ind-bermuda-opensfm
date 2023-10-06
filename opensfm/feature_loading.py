@@ -14,6 +14,12 @@ SEGMENTATION_IN_DESCRIPTOR_MULT = (
     35  # determined experimentally for HAHOG UCHAR type descriptors
 )
 
+SEMANTIC_SEGMENTATION_SUPPORTED_DESCRIPTORS = [
+    "UCHAR",
+    "HAHOG",
+    "SIFT"
+]
+
 
 class FeatureLoader:
     def clear_cache(self) -> None:
@@ -121,10 +127,10 @@ class FeatureLoader:
     ) -> ft.FeaturesData:
         if (
             not data.config["hahog_normalize_to_uchar"]
-            or data.config["feature_type"] != "HAHOG"
+            or data.config["feature_type"] not in SEMANTIC_SEGMENTATION_SUPPORTED_DESCRIPTORS
         ):
             raise RuntimeError(
-                "Semantic segmentation in descriptor only supported for HAHOG UCHAR descriptors"
+                f"Semantic segmentation in descriptor only supported for {SEMANTIC_SEGMENTATION_SUPPORTED_DESCRIPTORS} descriptors"
             )
 
         segmentation = features.get_segmentation()
