@@ -8,16 +8,6 @@ import cv2
 import numpy as np
 from opensfm import context, pyfeatures
 
-# CUSTOM CHANGES #1 BEGIN
-# imports for SuperPoint and DISK
-from lightglue import SuperPoint, DISK
-from lightglue.utils import numpy_image_to_torch
-import torch
-import pypopsift
-from nets.aliked import ALIKED
-# CUSTOM CHANGES #1 END
-
-
 logger: logging.Logger = logging.getLogger(__name__)
 
 
@@ -568,6 +558,7 @@ def extract_features_orb(
 def extract_features_popsift(
     image: np.ndarray, config: Dict[str, Any], features_count: int
 ) -> Tuple[np.ndarray, np.ndarray]:
+    import pypopsift
 
     sift_edge_threshold = float(config["sift_edge_threshold"])
     sift_peak_threshold = float(config["sift_peak_threshold"])
@@ -586,7 +577,9 @@ def extract_features_popsift(
 def extract_features_aliked(
         image: np.ndarray, config: Dict[str, Any], features_count: int
 ) -> Tuple[np.ndarray, np.ndarray]:
-    
+    import torch
+    from nets.aliked import ALIKED
+
     if not hasattr(extract_features_aliked, "aliked"):
         logger.debug("Initializing ALIKED...")
         if not torch.cuda.is_available():
@@ -609,6 +602,10 @@ def extract_features_aliked(
 def extract_features_superpoint(
     image: np.ndarray, config: Dict[str, Any], features_count: int
 ) -> Tuple[np.ndarray, np.ndarray]:
+    from lightglue import SuperPoint
+    from lightglue.utils import numpy_image_to_torch
+    import torch
+
     descriptor_dim = config.get(
         "descriptor_dim", SuperPoint.default_conf["descriptor_dim"]
     )
@@ -670,6 +667,10 @@ def extract_features_superpoint(
 def extract_features_disk(
     image: np.ndarray, config: Dict[str, Any], features_count: int
 ) -> Tuple[np.ndarray, np.ndarray]:
+    from lightglue import DISK
+    from lightglue.utils import numpy_image_to_torch
+    import torch
+
     desc_dim = config.get("desc_dim", DISK.default_conf["desc_dim"])
     nms_window_size = config.get(
         "nms_window_size", DISK.default_conf["nms_window_size"]

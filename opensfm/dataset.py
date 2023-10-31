@@ -287,7 +287,7 @@ class DataSet(DataSetBase):
         Return path of feature file for specified image
         :param image: Image name, with extension (i.e. 123.jpg)
         """
-        return os.path.join(self._feature_path(), image + ".features.npz")
+        return os.path.join(self._feature_path(), image + "." + self.feature_type() + ".features.npz")
 
     def _feature_file_legacy(self, image: str) -> str:
         """
@@ -335,13 +335,18 @@ class DataSet(DataSetBase):
         with self.io_handler.open(self._words_file(image), "wb") as f:
             np.savez_compressed(f, words=words.astype(np.uint16))
 
+    def _matcher_type(self) -> str:
+        """Return the type of local matching (e.g. WORDS FLANN)"""
+        match_name = self.config["matcher_type"].lower()
+        return match_name
+
     def _matches_path(self) -> str:
         """Return path of matches directory"""
         return os.path.join(self.data_path, "matches")
 
     def _matches_file(self, image: str) -> str:
         """File for matches for an image"""
-        return os.path.join(self._matches_path(), "{}_matches.pkl.gz".format(image))
+        return os.path.join(self._matches_path(), "{}_{}_matches.pkl.gz".format(image, self._matcher_type()))
 
     def matches_exists(self, image: str) -> bool:
         return self.io_handler.isfile(self._matches_file(image))

@@ -155,6 +155,7 @@ def match_candidates_by_distance(
     reference: geo.TopocentricConverter,
     max_neighbors: int,
     max_distance: float,
+    data: DataSetBase,
 ) -> Set[Tuple[str, str]]:
     """Find candidate matching pairs by GPS distance.
 
@@ -190,6 +191,8 @@ def match_candidates_by_distance(
 
     pairs = set()
     for image_ref in images_ref:
+        if data.matches_exists(image_ref):
+            continue
         nn = k + 1 if image_ref in images_cand else k
 
         point = representative_points[image_ref]
@@ -517,6 +520,7 @@ def match_candidates_by_time(
     images_cand: List[str],
     exifs: Dict[str, Any],
     max_neighbors: int,
+    data: DataSetBase,
 ) -> Set[Tuple[str, str]]:
     """Find candidate matching pairs by time difference."""
     if max_neighbors <= 0:
@@ -531,6 +535,8 @@ def match_candidates_by_time(
 
     pairs = set()
     for image_ref in images_ref:
+        if data.matches_exists(image_ref):
+            continue
         nn = k + 1 if image_ref in images_cand else k
 
         time = exifs[image_ref]["capture_time"]
@@ -549,7 +555,10 @@ def match_candidates_by_time(
 
 
 def match_candidates_by_order(
-    images_ref: List[str], images_cand: List[str], max_neighbors: int
+    images_ref: List[str], 
+    images_cand: List[str], 
+    max_neighbors: int,
+    data: DataSetBase,
 ) -> Set[Tuple[str, str]]:
     """Find candidate matching pairs by sequence order."""
     if max_neighbors <= 0:
@@ -558,6 +567,8 @@ def match_candidates_by_order(
 
     pairs = set()
     for i, image_ref in enumerate(images_ref):
+        if data.matches_exists(image_ref):
+            continue
         a = max(0, i - n)
         b = min(len(images_cand), i + n)
         for j in range(a, b):
@@ -631,13 +642,13 @@ def match_candidates_from_metadata(
         pairs = {sorted_pair(i, j) for i in images_ref for j in images_cand if i != j}
     else:
         d = match_candidates_by_distance(
-            images_ref, images_cand, exifs, reference, gps_neighbors, max_distance
+            images_ref, images_cand, exifs, reference, gps_neighbors, max_distance, data
         )
         g = match_candidates_by_graph(
             images_ref, images_cand, exifs, reference, graph_rounds
         )
-        t = match_candidates_by_time(images_ref, images_cand, exifs, time_neighbors)
-        o = match_candidates_by_order(images_ref, images_cand, order_neighbors)
+        t = match_candidates_by_time(images_ref, images_cand, exifs, time_neighbors, data)
+        o = match_candidates_by_order(images_ref, images_cand, order_neighbors, data)
         b = match_candidates_with_bow(
             data,
             images_ref,

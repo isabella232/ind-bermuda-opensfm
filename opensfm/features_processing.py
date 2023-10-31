@@ -159,15 +159,27 @@ def read_images(
 ) -> None:
     full_queue_timeout = 600
     for image in images:
-        logger.info(f"Reading data for image {image} (queue-size={queue.qsize()})")
-        image_array = data.load_image(image)
-        if data.config["features_bake_segmentation"]:
-            segmentation_array = data.load_segmentation(image)
-            instances_array = data.load_instances(image)
+        need_words = (
+            data.config["matcher_type"] == "WORDS"
+            or data.config["matching_bow_neighbors"] > 0
+        )
+        has_words = not need_words or data.words_exist(image)
+        has_features = data.features_exist(image)
+
+        if not force and has_features and has_words:
+            logger.info(
+                "Skip read Image {} features found already".format(image)
+            )
         else:
-            segmentation_array, instances_array = None, None
-        args = image, image_array, segmentation_array, instances_array, data, force
-        queue.put(args, block=True, timeout=full_queue_timeout)
+            logger.info(f"Reading data for image {image} (queue-size={queue.qsize()})")
+            image_array = data.load_image(image)
+            if data.config["features_bake_segmentation"]:
+                segmentation_array = data.load_segmentation(image)
+                instances_array = data.load_instances(image)
+            else:
+                segmentation_array, instances_array = None, None
+            args = image, image_array, segmentation_array, instances_array, data, force
+            queue.put(args, block=True, timeout=full_queue_timeout)
         counter.increment()
         if counter.value() == expected:
             logger.info("Finished reading images")
@@ -236,16 +248,6 @@ def detect(
         data.config["matcher_type"] == "WORDS"
         or data.config["matching_bow_neighbors"] > 0
     )
-    has_words = not need_words or data.words_exist(image)
-    has_features = data.features_exist(image)
-
-    if not force and has_features and has_words:
-        logger.info(
-            "Skip recomputing {} features for image {}".format(
-                data.feature_type().upper(), image
-            )
-        )
-        return
 
     logger.info(
         "Extracting {} features for image {}".format(data.feature_type().upper(), image)
