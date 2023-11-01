@@ -16,6 +16,7 @@
 !setup.cfg
 !setup.py
 !viewer
+!lightglue.patch
 
 # Picking exceptions
 doc/build

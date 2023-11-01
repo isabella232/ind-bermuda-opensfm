@@ -16,7 +16,5 @@ Sphinx==4.2.0
 six
 xmltodict==0.10.2
 wheel
-torch==2.1.0
-torchvision==0.16.0
 opencv-python==4.5.1.48 ; sys_platform == "win32"
 opencv-python ; sys_platform == "linux"
