@@ -49,6 +49,8 @@ class DataSet(DataSetBase):
         self.io_handler = io_handler
         self.data_path = data_path
         self.load_config()
+        
+        ## vvvv comment out for hx
         self.load_image_list()
         self.load_mask_list()
 
