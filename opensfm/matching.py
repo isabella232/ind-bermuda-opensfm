@@ -57,6 +57,37 @@ def match_images(
     )
 
 
+def calculate_pairs_to_eval(
+    data: DataSetBase,
+    config_override: Dict[str, Any],
+    ref_images: List[str],
+    cand_images: List[str],
+) -> Tuple[List[Tuple[str, str]], Dict[str, Any]]:
+    """Perform pair matchings between two sets of images.
+
+    It will do matching for each pair (i, j), i being in
+    ref_images and j in cand_images, taking assumption that
+    matching(i, j) == matching(j ,i). This does not hold for
+    non-symmetric matching options like WORDS. Data will be
+    stored in i matching only.
+    """
+
+    # Get EXIFs data
+    all_images = list(set(ref_images + cand_images))
+    exifs = {im: data.load_exif(im) for im in all_images}
+
+    # Generate pairs for matching
+    pairs, preport = pairs_selection.match_candidates_from_metadata(
+        ref_images,
+        cand_images,
+        exifs,
+        data,
+        config_override,
+    )
+
+    return (pairs, preport)
+
+
 def match_images_with_pairs(
     data: DataSetBase,
     config_override: Dict[str, Any],
@@ -66,7 +97,8 @@ def match_images_with_pairs(
 ) -> Dict[Tuple[str, str], List[Tuple[int, int]]]:
     """Perform pair matchings given pairs."""
     cameras = data.load_camera_models()
-    args = list(match_arguments(pairs, data, config_override, cameras, exifs, poses))
+    args = list(match_arguments(
+        pairs, data, config_override, cameras, exifs, poses))
 
     # Perform all pair matchings in parallel
     start = timer()
@@ -74,9 +106,11 @@ def match_images_with_pairs(
     processes = config_override.get("processes", data.config["processes"])
     mem_per_process = 512
     jobs_per_process = 2
-    processes = context.processes_that_fit_in_memory(processes, mem_per_process)
+    processes = context.processes_that_fit_in_memory(
+        processes, mem_per_process)
     logger.info("Computing pair matching with %d processes" % processes)
-    matches = context.parallel_map(match_unwrap_args, args, processes, jobs_per_process)
+    matches = context.parallel_map(
+        match_unwrap_args, args, processes, jobs_per_process)
     logger.info(
         "Matched {} pairs {} in {} seconds ({} seconds/pair).".format(
             len(pairs),
@@ -311,7 +345,8 @@ def _match_descriptors_guided_impl(
         relative_pose,
         overriden_config["guided_matching_threshold"],
     )
-    matches = match_brute_force_symmetric(d1, d2, overriden_config, epipolar_mask)
+    matches = match_brute_force_symmetric(
+        d1, d2, overriden_config, epipolar_mask)
 
     # Adhoc filters
     if overriden_config["matching_use_filters"]:
@@ -559,7 +594,8 @@ def _match_robust_impl(
 ) -> np.ndarray:
     """Perform robust geometry matching on a set of matched descriptors indexes."""
     # robust matching
-    rmatches = robust_match(p1, p2, camera1, camera2, matches, overriden_config)
+    rmatches = robust_match(p1, p2, camera1, camera2,
+                            matches, overriden_config)
     rmatches = np.array([[a, b] for a, b in rmatches])
     return rmatches
 
@@ -695,7 +731,8 @@ def match_flann(
     """
     search_params = dict(checks=config["flann_checks"])
     results, dists = index.knnSearch(f2, 2, params=search_params)
-    squared_ratio = config["lowes_ratio"] ** 2  # Flann returns squared L2 distances
+    # Flann returns squared L2 distances
+    squared_ratio = config["lowes_ratio"] ** 2
     good = dists[:, 0] < squared_ratio * dists[:, 1]
     return list(zip(results[good, 0], good.nonzero()[0]))
 
@@ -741,7 +778,8 @@ def match_brute_force(
     matcher = cv2.DescriptorMatcher_create(matcher_type)
     matcher.add([f2])
     if maskij is not None:
-        matches = matcher.knnMatch(f1, k=2, masks=np.array([maskij]).astype(np.uint8))
+        matches = matcher.knnMatch(
+            f1, k=2, masks=np.array([maskij]).astype(np.uint8))
     else:
         matches = matcher.knnMatch(f1, k=2)
 
@@ -776,7 +814,8 @@ def match_brute_force_symmetric(
     """
     matches_ij = [(a, b) for a, b in match_brute_force(fi, fj, config, maskij)]
     maskijT = maskij.T if maskij is not None else None
-    matches_ji = [(b, a) for a, b in match_brute_force(fj, fi, config, maskijT)]
+    matches_ji = [(b, a)
+                  for a, b in match_brute_force(fj, fi, config, maskijT)]
 
     return list(set(matches_ij).intersection(set(matches_ji)))
 
@@ -945,7 +984,8 @@ def robust_match_calibrated(
     T = multiview.relative_pose_ransac(b1, b2, threshold, 1000, 0.999)
 
     for relax in [4, 2, 1]:
-        inliers = compute_inliers_bearings(b1, b2, T[:, :3], T[:, 3], relax * threshold)
+        inliers = compute_inliers_bearings(
+            b1, b2, T[:, :3], T[:, 3], relax * threshold)
         if np.sum(inliers) < 8:
             return np.array([])
         iterations = config["five_point_refine_match_iterations"]
