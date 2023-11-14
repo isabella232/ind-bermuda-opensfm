@@ -59,6 +59,7 @@ def export(reconstruction, tracks_manager, udata: UndistortedDataSet, export_onl
             exporter.add_camera(str(camera.id), K, w, h)
 
     shots_map = {}
+    total_behind = 0
 
     for shot in reconstruction.shots.values():
         if export_only is not None and shot.id not in export_only:
@@ -92,7 +93,8 @@ def export(reconstruction, tracks_manager, udata: UndistortedDataSet, export_onl
         # Is point in front of the camera?
         is_behind = shot.pose.transform(point.coordinates)[2] > 0
         if is_behind:
-            print("Removing shot %s - behind camera" % shot_id)
+            nonlocal total_behind
+            total_behind+=1
         return is_behind
 
     for point in reconstruction.points.values():
@@ -110,5 +112,6 @@ def export(reconstruction, tracks_manager, udata: UndistortedDataSet, export_onl
             coordinates = np.array(point.coordinates, dtype=np.float64)
             exporter.add_point([coordinates[0] - offset[0], coordinates[1] - offset[1], coordinates[2] - offset[2]], shots)
 
+    print("Removed %d shots found behind the camera" % total_behind)
     io.mkdir_p(udata.data_path + "/openmvs")
     exporter.export(udata.data_path + "/openmvs/scene.mvs")
