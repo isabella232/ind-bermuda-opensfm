@@ -12,6 +12,8 @@ PYBIND11_MODULE(pydense, m) {
       .def("add_camera", &dense::OpenMVSExporter::AddCamera)
       .def("add_shot", &dense::OpenMVSExporter::AddShot)
       .def("add_point", &dense::OpenMVSExporter::AddPoint)
+      .def("set_obb_min", &dense::OpenMVSExporter::SetObbMin)
+      .def("set_obb_max", &dense::OpenMVSExporter::SetObbMax)
       .def("export", &dense::OpenMVSExporter::Export);
 
   py::class_<dense::DepthmapEstimatorWrapper>(m, "DepthmapEstimator")

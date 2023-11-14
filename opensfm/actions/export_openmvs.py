@@ -4,15 +4,33 @@ import numpy as np
 from opensfm import io
 from opensfm import pydense
 from opensfm.dataset import DataSet, UndistortedDataSet
+import json
 
-
-def run_dataset(data: DataSet, image_list) -> None:
+def run_dataset(data: DataSet, image_list, corrections_file: str) -> None:
     """ Export reconstruction to OpenMVS format. """
 
     udata = data.undistorted_dataset()
     reconstructions = udata.load_undistorted_reconstruction()
     tracks_manager = udata.load_undistorted_tracks_manager()
 
+    offset = [0, 0, 0]
+    obb_min = { "x": 0, "y": 0, "z": 0 }
+    obb_max = { "x": 0, "y": 0, "z": 0 }
+    if corrections_file:
+        with open(corrections_file, "r") as f:
+            correction_data = json.load(f)
+            if "offset" in correction_data:
+                offset = [
+                    correction_data["offset"]["x"],
+                    correction_data["offset"]["y"],
+                    correction_data["offset"]["z"],
+                ]
+            if "obb" in correction_data:
+                if "min" in correction_data["obb"]:
+                    obb_min = correction_data["obb"]["min"]
+                if "max" in correction_data["obb"]:
+                    obb_max = correction_data["obb"]["max"]
+                
     export_only = None
     if image_list:
         export_only = {}
@@ -21,11 +39,13 @@ def run_dataset(data: DataSet, image_list) -> None:
                 export_only[image.strip()] = True
 
     if reconstructions:
-        export(reconstructions[0], tracks_manager, udata, export_only)
+        export(reconstructions[0], tracks_manager, udata, export_only, offset, obb_min, obb_max)
 
 
-def export(reconstruction, tracks_manager, udata: UndistortedDataSet, export_only) -> None:
+def export(reconstruction, tracks_manager, udata: UndistortedDataSet, export_only, offset, obb_min, obb_max) -> None:
     exporter = pydense.OpenMVSExporter()
+    exporter.set_obb_min(obb_min["x"], obb_min["y"], obb_min["z"])
+    exporter.set_obb_max(obb_max["x"], obb_max["y"], obb_max["z"])
     for camera in reconstruction.cameras.values():
         if camera.projection_type == "perspective":
             w, h = camera.width, camera.height
@@ -51,6 +71,8 @@ def export(reconstruction, tracks_manager, udata: UndistortedDataSet, export_onl
                 mask_path = ""
 
             shots_map[str(shot.id)] = shot
+            
+            origin = shot.pose.get_origin()
 
             exporter.add_shot(
                 str(os.path.abspath(image_path)),
@@ -58,7 +80,7 @@ def export(reconstruction, tracks_manager, udata: UndistortedDataSet, export_onl
                 str(shot.id),
                 str(shot.camera.id),
                 shot.pose.get_rotation_matrix(),
-                shot.pose.get_origin(),
+                [origin[0] - offset[0], origin[1] -offset[1], origin[2] - offset[2]]
             )
 
     def positive_point_depth(point, shot_id):
@@ -86,7 +108,7 @@ def export(reconstruction, tracks_manager, udata: UndistortedDataSet, export_onl
 
         if shots:
             coordinates = np.array(point.coordinates, dtype=np.float64)
-            exporter.add_point(coordinates, shots)
+            exporter.add_point([coordinates[0] - offset[0], coordinates[1] - offset[1], coordinates[2] - offset[2]], shots)
 
     io.mkdir_p(udata.data_path + "/openmvs")
     exporter.export(udata.data_path + "/openmvs/scene.mvs")
