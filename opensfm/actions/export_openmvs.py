@@ -14,8 +14,8 @@ def run_dataset(data: DataSet, image_list, corrections_file: str) -> None:
     tracks_manager = udata.load_undistorted_tracks_manager()
 
     offset = [0, 0, 0]
-    obb_min = { "x": 0, "y": 0, "z": 0 }
-    obb_max = { "x": 0, "y": 0, "z": 0 }
+    obb_min = [0, 0, 0]
+    obb_max = [0, 0, 0]
     if corrections_file:
         with open(corrections_file, "r") as f:
             correction_data = json.load(f)
@@ -27,9 +27,17 @@ def run_dataset(data: DataSet, image_list, corrections_file: str) -> None:
                 ]
             if "obb" in correction_data:
                 if "min" in correction_data["obb"]:
-                    obb_min = correction_data["obb"]["min"]
+                    obb_min = [
+                        correction_data["obb"]["min"]["x"],
+                        correction_data["obb"]["min"]["y"],
+                        correction_data["obb"]["min"]["z"],
+                    ]
                 if "max" in correction_data["obb"]:
-                    obb_max = correction_data["obb"]["max"]
+                    obb_max = [
+                        correction_data["obb"]["max"]["x"],
+                        correction_data["obb"]["max"]["y"],
+                        correction_data["obb"]["max"]["z"],
+                    ]
                 
     export_only = None
     if image_list:
@@ -44,8 +52,8 @@ def run_dataset(data: DataSet, image_list, corrections_file: str) -> None:
 
 def export(reconstruction, tracks_manager, udata: UndistortedDataSet, export_only, offset, obb_min, obb_max) -> None:
     exporter = pydense.OpenMVSExporter()
-    exporter.set_obb_min(obb_min["x"], obb_min["y"], obb_min["z"])
-    exporter.set_obb_max(obb_max["x"], obb_max["y"], obb_max["z"])
+    exporter.set_obb_min(obb_min[0], obb_min[1], obb_min[2])
+    exporter.set_obb_max(obb_max[0], obb_max[1], obb_max[2])
     for camera in reconstruction.cameras.values():
         if camera.projection_type == "perspective":
             w, h = camera.width, camera.height
