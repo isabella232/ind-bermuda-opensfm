@@ -45,6 +45,18 @@ class OpenMVSExporter {
     scene_.images.push_back(image);
   }
 
+  void SetObbMin(double x, double y, double z) {
+    scene_.obb.ptMin.x = x;
+    scene_.obb.ptMin.y = y;
+    scene_.obb.ptMin.z = z;
+  }
+
+  void SetObbMax(double x, double y, double z) {
+    scene_.obb.ptMax.x = x;
+    scene_.obb.ptMax.y = y;
+    scene_.obb.ptMax.z = z;
+  }
+
   void AddPoint(pyarray_d coordinates, py::list shot_ids) {
     const double *x = coordinates.data();
 
